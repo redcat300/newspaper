@@ -1,0 +1,25 @@
+{% extends 'flatpages/default.html' %}
+
+{% load custom_filters %}
+
+
+{% block content %}
+<h1>Search News</h1>
+<form method="GET" action="{% url 'news_search' %}">
+    <input type="text" name="q" placeholder="Search by title">
+    <input type="text" name="author" placeholder="Search by author">
+    <input type="date" name="date" placeholder="Search by date">
+    <button type="submit">Search</button>
+</form>
+
+{% if news %}
+    <h2>Search Results</h2>
+    <ul>
+        {% for post in news %}
+            <li><a href="{% url 'news_detail' post.id %}">{{ post.title }}</a></li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No results found.</p>
+{% endif %}
+{% endblock %}

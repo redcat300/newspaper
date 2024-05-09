@@ -1,7 +1,7 @@
 {% extends 'flatpages/default.html' %}
+{% load custom_filters %}
 
 {% block title %}News List{% endblock %}
-{% load custom_filters %}
 
 {% block content %}
 <h1>Список всех новостей</h1>
@@ -27,6 +27,27 @@
             {% endfor %}
         </tbody>
     </table>
+
+    {% if news.has_other_pages %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if news.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ news.previous_page_number }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ news.number }} of {{ news.paginator.num_pages }}.
+            </span>
+
+            {% if news.has_next %}
+                <a href="?page={{ news.next_page_number }}">next</a>
+                <a href="?page={{ news.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
 {% else %}
     <p>Нет новостей.</p>
 {% endif %}

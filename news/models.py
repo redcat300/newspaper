@@ -67,3 +67,13 @@ class Comment(models.Model):
     def dislike(self):
         self.rating -= 1
         self.save()
+
+class Article(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+
+    class Meta:
+        managed = False  # Указываем, что Django не будет управлять созданием этой таблицы
+        db_table = 'news_post'  # Указываем название таблицы, которую мы хотим использовать
+    def __str__(self):
+        return self.title
