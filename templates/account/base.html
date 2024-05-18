@@ -1,0 +1,16 @@
+{% extends 'default.html' %}
+
+{% block head_title %}
+Вход в систему
+{% endblock head_title %}
+
+{% block content %}
+<h1>Вход в систему</h1>
+{% block login_form %}
+<form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Войти</button>
+</form>
+{% endblock login_form %}
+{% endblock content %}

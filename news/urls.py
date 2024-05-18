@@ -1,7 +1,13 @@
-# news/urls.py
-
 from django.urls import path
+from django.contrib.auth import views as auth_views
+from allauth.account.views import SignupView
 from . import views
+from news.views import SignUpView
+from .views import AuthorRequestView
+
+
+# Отладочная информация
+print("DEBUG: Ваш файл urls.py исполняется правильно.")
 
 urlpatterns = [
     path('', views.news_list, name='news_list'),
@@ -14,4 +20,8 @@ urlpatterns = [
     path('articles/create/', views.ArticleCreateView.as_view(), name='article_create'),
     path('articles/<int:pk>/edit/', views.ArticleUpdateView.as_view(), name='article_edit'),
     path('articles/<int:pk>/delete/', views.ArticleDeleteView.as_view(), name='article_delete'),
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('signup/', SignUpView.as_view(), name='signup'),
+    path('become_author/', AuthorRequestView.as_view(), name='become_author')
+
 ]
