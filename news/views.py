@@ -1,22 +1,37 @@
 from django.views.generic import CreateView, UpdateView, DeleteView
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.views import View
+from django.contrib.auth.models import Group
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import User
 from django.http import Http404
-from django.core.exceptions import PermissionDenied  # Импортируем исключение PermissionDenied
+from django.core.exceptions import PermissionDenied
 from .models import Post, Article, Profile
 from django.views import generic
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import FormView
 from django.urls import reverse_lazy
 from .forms import AuthorRequestForm
+from django.contrib.auth.decorators import login_required
 
-class AuthorRequestView(FormView):
-    template_name = 'become_author.html'
-    form_class = AuthorRequestForm
-    success_url = reverse_lazy('home')  # Перенаправляем пользователя на главную страницу после отправки запроса
+class AuthorRequestView(View):
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            # Получаем группу 'authors'
+            authors_group = Group.objects.get(name='authors')
+            # Проверяем, входит ли пользователь в группу 'authors'
+            if authors_group.user_set.filter(id=request.user.id).exists():
+                # Пользователь уже является автором
+                return redirect('profile')
+            else:
+                # Добавляем пользователя в группу 'authors'
+                authors_group.user_set.add(request.user)
+                return redirect('profile')
+        return redirect('login')
 
     def form_valid(self, form):
         # Отправляем уведомление администратору о запросе на статус автора
@@ -123,9 +138,9 @@ class ArticleDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
     model = Profile
-    fields = ['bio', 'location', 'birth_date']  # Поля профиля, которые можно редактировать
-    template_name = 'profiles/profile_edit.html'  # Шаблон для страницы редактирования профиля
-    success_url = reverse_lazy('profile_detail')  # После успешного редактирования профиля перенаправить на страницу деталей профиля
+    fields = ['bio', 'location', 'birth_date']
+    template_name = 'profiles/profile_edit.html'
+    success_url = reverse_lazy('profile_detail')
 
     def get_object(self, queryset=None):
         # Получаем объект профиля текущего пользователя
@@ -140,3 +155,15 @@ class SignUpView(generic.CreateView):
     form_class = UserCreationForm
     success_url = reverse_lazy('login')
     template_name = 'registration/signup.html'
+
+@login_required
+def profile(request):
+    return render(request, 'profile.html')
+
+class AuthorRequestView(View):
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            author_group = Group.objects.get(name='authors')
+            request.user.groups.add(author_group)
+            return redirect('profile')
+        return redirect('login')

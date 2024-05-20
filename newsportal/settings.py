@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'social_django',
 ]
 
 SITE_ID = 1
@@ -117,6 +118,10 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'https://170734914784-k1l213vjdnikvv38oei3s0cl3fetgplv.apps.googleusercontent.com/'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
 
 SITE_ID = 1
 

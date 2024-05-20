@@ -4,6 +4,8 @@ from allauth.account.views import SignupView
 from . import views
 from news.views import SignUpView
 from .views import AuthorRequestView
+from . import views
+from django.urls import path, include
 
 
 # Отладочная информация
@@ -22,6 +24,8 @@ urlpatterns = [
     path('articles/<int:pk>/delete/', views.ArticleDeleteView.as_view(), name='article_delete'),
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('signup/', SignUpView.as_view(), name='signup'),
-    path('become_author/', AuthorRequestView.as_view(), name='become_author')
+    path('become_author/', AuthorRequestView.as_view(), name='become_author'),
+    path('profile/', views.profile, name='profile'),
+    path('oauth/', include('social_django.urls', namespace='social')),
 
 ]

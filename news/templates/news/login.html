@@ -1,5 +1,4 @@
-<!-- login.html -->
-
+{% extends 'flatpages/default.html' %}
 <form method="post" action="{% url 'login' %}">
     {% csrf_token %}
     {{ form.as_p }}
