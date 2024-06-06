@@ -1,0 +1,6 @@
+<h1>Новые статьи в категории {{ category.name }}</h1>
+{% for article in articles %}
+    <h2>{{ article.title }}</h2>
+    <p>{{ article.content|truncatewords:50 }}</p>
+    <p>Читать далее: <a href="{{ article_url }}">перейти к статье</a></p>
+{% endfor %}

@@ -1,0 +1,28 @@
+{% extends 'flatpages/default.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mt-5 mb-4">Subscribed Categories</h2>
+    {% if messages %}
+        <div class="alert alert-dismissible {% if messages.tags %}alert-{{ messages.tags }}{% endif %}">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+        </div>
+    {% endif %}
+    <ul class="list-group">
+        {% for category in subscribed_categories %}
+            <li class="list-group-item">
+                {{ category.name }}
+                <form action="{% url 'unsubscribe_category' category.id %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger ml-2">Unsubscribe</button>
+                </form>
+            </li>
+        {% empty %}
+            <li class="list-group-item">You are not subscribed to any categories yet.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Our Site</title>
+</head>
+<body>
+    <p>Dear {{ username }},</p>
+    <p>Welcome to Our Site! We're excited to have you as a new member of our community.</p>
+    <p>Click <a href="{% url 'activate_account' activation_key %}">here</a> to activate your account.</p>
+    <p>Best regards,<br>
+    Your Site Team</p>
+</body>
+</html>

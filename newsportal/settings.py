@@ -143,9 +143,27 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
 LOGIN_REDIRECT_URL = '/news/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' if not DEBUG else 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.yandex.ru'
+EMAIL_PORT = 465
+EMAIL_HOST_USER = 'gavrilovvikt2012'
+EMAIL_HOST_PASSWORD = 'a1532bcd16a'
+EMAIL_USE_SSL = True
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+ADMINS = [
+    ('admin', 'gavrilovvikt0303@gmail.com'),
+]
+
+SERVER_EMAIL = 'gavrilovvikt2012@yandex.ru'
 

@@ -1,0 +1,28 @@
+{% extends 'flatpages/default.html' %}
+
+{% block title %}
+    {% if category_name %}
+        {{ category_name }}
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% for category in categories %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="card-title">{{ category.name }}</h2>
+                {% if user.is_authenticated %}
+                    {% if user in category.subscribers.all %}
+                        <a href="{% url 'unsubscribe_category' category.id %}" class="btn btn-danger">Отписаться</a>
+                    {% else %}
+                        <a href="{% url 'subscribe_category' category.id %}" class="btn btn-success">Подписаться</a>
+                    {% endif %}
+                {% else %}
+                    <p class="card-text">Пожалуйста, <a href="{% url 'login' %}">войдите в систему</a>, чтобы подписаться.</p>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% endblock %}
