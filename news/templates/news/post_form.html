@@ -1,0 +1,12 @@
+{% extends 'news/default.html' %}
+
+{% block title %}Создать новость{% endblock title %}
+
+{% block content %}
+<h1>Создать новый пост</h1>
+<form method="post" class="form-group">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Создать</button>
+</form>
+{% endblock content %}

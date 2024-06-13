@@ -1,3 +1,21 @@
+import logging
+from django.core.mail import send_mail
+
+def send_email(subject, message, recipient_list, html_message=None):
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email='redcatyolo@yandex.ru',
+            recipient_list=recipient_list,
+            fail_silently=False,
+            html_message=html_message
+        )
+        logging.info(f"Письмо успешно отправлено на: {recipient_list}")
+    except Exception as e:
+        logging.error(f"Ошибка отправки письма: {e}")
+
+
 from django.views.generic import (
     CreateView, UpdateView, DeleteView
 )
@@ -8,7 +26,6 @@ from django.contrib.auth.mixins import (
     LoginRequiredMixin, UserPassesTestMixin
 )
 from django.core.management.base import BaseCommand
-
 from django.urls import reverse_lazy
 from django.contrib import messages
 from .models import Post, Article, Category, Profile, Author
@@ -17,14 +34,15 @@ from django.template.loader import render_to_string
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.models import Group, User, Permission
-from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.urls import reverse_lazy
 
-
-
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+from .utils  import send_new_post_email
 
 
 class AuthorRequestView(View):
@@ -75,19 +93,48 @@ def news_search(request):
     return render(request, 'news/news_search.html', {'news': news})
 
 
-class NewsCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class NewsCreateView(CreateView):
     model = Post
-    fields = ['title', 'content']
-    template_name = 'news/news_create.html'
+    fields = ['title', 'content', 'categories']
+    template_name = 'news/post_form.html'
     success_url = reverse_lazy('news_list')
 
     def form_valid(self, form):
-        author, created = Author.objects.get_or_create(user=self.request.user)
-        form.instance.author = author
-        return super().form_valid(form)
+        # Убедись, что текущий пользователь имеет связанный объект Author
+        if hasattr(self.request.user, 'author'):
+            form.instance.author = self.request.user.author
+        else:
+            # Логируем ошибку, если у пользователя нет связанного объекта Author
+            logging.error("Текущий пользователь не имеет связанного объекта Author.")
+            return self.form_invalid(form)  # Возвращаем ошибку формы
 
-    def test_func(self):
-        return self.request.user.groups.filter(name='authors').exists()
+        response = super().form_valid(form)
+        try:
+            send_new_post_email(form.instance)
+            logging.info(f"Уведомления отправлены для поста: {form.instance.title}")
+        except Exception as e:
+            logging.error(f"Ошибка при отправке уведомлений для поста: {form.instance.title}: {e}")
+        return response
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object:  # Проверка, создан ли объект
+            context['article_url'] = reverse_lazy('news_detail', kwargs={'pk': self.object.pk})
+        else:
+            context['article_url'] = None
+        return context
+
+
+    def send_notifications_to_subscribers(self, article):
+        category = article.category
+        subscribers_emails = category.subscribers.values_list('email', flat=True)
+        subject = f"Новая статья в категории {category.name}"
+        message = render_to_string('email/new_article_notification.html', {
+            'article': article,
+            'article_url': reverse_lazy('news_detail', kwargs={'pk': article.pk}),
+        })
+        send_email(subject, 'У вас новый пост, пожалуйста проверьте свою почту.', list(subscribers_emails), html_message=message)
 
 
 class NewsUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -110,19 +157,26 @@ class NewsDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return self.request.user.groups.filter(name='authors').exists() or self.request.user == post.author.user
 
 
-class ArticleCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class ArticleCreateView(CreateView):
     model = Article
     fields = ['title', 'content', 'category']
     template_name = 'news/article_form.html'
     success_url = reverse_lazy('news_list')
 
-    def test_func(self):
-        return self.request.user.groups.filter(name='authors').exists()
-
     def form_valid(self, form):
         response = super().form_valid(form)
-        send_news_email(form.instance)
+        self.send_notifications_to_subscribers(form.instance)
         return response
+
+    def send_notifications_to_subscribers(self, article):
+        category = article.category
+        subscribers_emails = category.subscribers.values_list('email', flat=True)
+        subject = f"Новая статья в категории {category.name}"
+        message = render_to_string('email/new_article_notification.html', {
+            'article': article,
+            'article_url': reverse_lazy('news_detail', kwargs={'pk': article.pk}),
+        })
+        send_email(subject, 'У вас новый пост, пожалуйста проверьте свою почту.', list(subscribers_emails), html_message=message)
 
 
 class ArticleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -169,32 +223,17 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-
-        # Отправка приветственного письма
-        username = form.cleaned_data['username']
+        user = form.save(commit=False)
         email = form.cleaned_data['email']
-        email_subject = 'Welcome to Our Site'
-        email_body = render_to_string('welcome_email.html', {'username': username})
+        username = form.cleaned_data['username']
+        user.save()
 
-        email = EmailMessage(
-            email_subject,
-            email_body,
-            'gavrilovvikt2012@yandex.com',  # отправитель
-            [email],  # получатель
+        send_email(
+            subject='Добро пожаловать на наш сайт!',
+            message=f'Здравствуйте, {username}!\n\nСпасибо за регистрацию на нашем сайте.',
+            recipient_list=[email],
+            html_message=render_to_string('email/welcome_email.html', {'username': username})
         )
-        email.content_subtype = "html"
-        email.send()
-
-
-        authors_group, _ = Group.objects.get_or_create(name='authors')
-
-        superuser = User.objects.get(is_superuser=True)
-
-        superuser.groups.add(authors_group)
-
-        add_post_permission, _ = Permission.objects.get_or_create(codename='add_post')
-
-        authors_group.permissions.add(add_post_permission)
 
         return response
 
@@ -208,7 +247,6 @@ def category_list(request):
     categories = Category.objects.all()
     user = request.user
     return render(request, 'categories.html', {'categories': categories, 'user': user})
-
 
 
 @login_required
@@ -225,19 +263,15 @@ def subscribe_category(request, category_id):
         category.subscribers.add(request.user)
         messages.success(request, 'Вы успешно подписались на категорию.')
 
-        print(f'Email пользователя {request.user.username} ({request.user.email}) при подписке на категорию {category.name}')
-
-        send_mail(
-            'Подписка на категорию',
-            'Вы успешно подписались на категорию {}.'.format(category.name),
-            'gavrilovvikt2012@yandex.ru',
-            ["gavrilovvikt0303@gmail.com"],
-            fail_silently=False,
+        send_email(
+            subject='Подписка на категорию',
+            message=f'Вы успешно подписались на категорию {category.name}.',
+            recipient_list=[request.user.email]
         )
-
     else:
         messages.info(request, 'Вы уже подписаны на эту категорию.')
     return redirect('category_list')
+
 
 @login_required
 def unsubscribe_category(request, category_id):
@@ -246,63 +280,47 @@ def unsubscribe_category(request, category_id):
         category.subscribers.remove(request.user)
         messages.success(request, 'Вы успешно отписались от категории.')
 
-        print(f'Email пользователя {request.user.username} ({request.user.email}) при отписке от категории {category.name}')
-
-        send_mail(
-            'Отписка от категории',
-            'Вы успешно отписались от категории {}.'.format(category.name),
-            'gavrilovvikt2012@yandex.ru',
-            ["gavrilovvikt0303@gmail.com"],
-            fail_silently=False,
+        send_email(
+            subject='Отписка от категории',
+            message=f'Вы успешно отписались от категории {category.name}.',
+            recipient_list=[request.user.email]
         )
-
     else:
         messages.info(request, 'Вы не подписаны на эту категорию.')
     return redirect('category_list')
 
-
-    def send_news_email(article):
-        category = article.category
-        subscribers = category.subscribers.all()
-        for subscriber in subscribers:
-            email_subject = article.title
-            email_body = render_to_string('news_email.html', {
-                'article_title': article.title,
-                'article_content': article.content[:50],
-                'username': subscriber.username,
-                'article_url': reverse_lazy('news_detail', kwargs={'pk': article.pk})
-            })
-
-            email = EmailMessage(
-                email_subject,
-                email_body,
-                settings.DEFAULT_FROM_EMAIL,  # используем адрес отправителя из настроек
-                [subscriber.email]
-            )
-            email.content_subtype = "html"
-
-            # Отправляем письмо
-            if settings.DEBUG:
-                print(f"Отправка письма на адрес {subscriber.email}:")
-                print(f"Тема: {email_subject}")
-                print(f"Тело:\n{email_body}")
-                print("------------------------------")
-            else:
-                email.send()
-
-
-def send_article_notification(article):
+def send_news_email(article):
     category = article.category
     subscribers = category.subscribers.all()
 
     for subscriber in subscribers:
         subject = f"Новая статья в категории {category.name}"
-        message = render_to_string('email/article_notification.html', {
+        message_html = render_to_string('email/new_article_notification.html', {
+            'subscriber': subscriber,
+            'article': article,
+            'category': category,
+        })
+
+        send_email(
+            subject=subject,
+            message='У вас новый пост, пожалуйста проверьте свою почту.',
+            recipient_list=[subscriber.email],
+            html_message=message_html
+        )
+
+
+def send_article_notification(article):
+    categories = article.category
+    subscribers = category.subscribers.all()
+
+    for subscriber in subscribers:
+        subject = f"Новая статья в категории {category.name}"
+        message = render_to_string('email/new_article_notification.html', {
             'subscriber': subscriber,
             'article': article,
             'article_url': reverse_lazy('news_detail', kwargs={'pk': article.pk}),
         })
-        send_mail(subject, message, 'your_email@example.com', [subscriber.email])
+        send_email(subject, message, [subscriber.email], html_message=message)
 
 
 class Command(BaseCommand):
@@ -316,9 +334,15 @@ class Command(BaseCommand):
             if new_articles.exists():
                 for subscriber in category.subscribers.all():
                     subject = f"Новые статьи в категории {category.name}"
-                    message = render_to_string('email/weekly_news.html', {
+                    html_message = render_to_string('email/weekly_news.html', {
                         'subscriber': subscriber,
                         'articles': new_articles,
                     })
-                    send_mail(subject, message, 'your_email@example.com', [subscriber.email])
+                    plain_message = strip_tags(html_message)
 
+                    send_email(
+                        subject=subject,
+                        message=plain_message,
+                        recipient_list=[subscriber.email],
+                        html_message=html_message
+                    )

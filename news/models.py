@@ -6,6 +6,9 @@ from django.db.models.signals import post_save
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
+from .utils import send_new_post_email
+from django.contrib.auth.models import User
+import logging
 
 
 
@@ -35,14 +38,10 @@ class Author(models.Model):
         self.user.groups.remove(authors_group)
 
     def assign_post_permissions(self):
-        # Получаем тип содержимого для модели Post
         content_type = ContentType.objects.get_for_model(Post)
-        # Определяем разрешения для создания и изменения объектов Post
         create_permission = Permission.objects.get(codename='add_post', content_type=content_type)
         change_permission = Permission.objects.get(codename='change_post', content_type=content_type)
-        # Получаем или создаем группу "authors"
         authors_group, _ = Group.objects.get_or_create(name='authors')
-        # Назначаем разрешения группе "authors"
         authors_group.permissions.add(create_permission, change_permission)
 
     def __str__(self):
@@ -56,11 +55,16 @@ def add_to_common_group(sender, instance, created, **kwargs):
         instance.groups.add(common_group)
 
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    subscribers = models.ManyToManyField(User, related_name='subscribed_categories', blank=True)
+    name = models.CharField(max_length=255)
+    subscribers = models.ManyToManyField(User, related_name='subscribed_categories')
 
     def __str__(self):
-        return self.name.title()
+        return self.name
+    def subscribe(self, user):
+        self.subscribers.add(user)
+
+    def unsubscribe(self, user):
+        self.subscribers.remove(user)
 
 
 class Post(models.Model):
@@ -75,6 +79,17 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
     rating = models.IntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            logging.info(f"Создан новый пост: {self.title}")
+            try:
+                send_new_post_email(self)
+                logging.info(f"Уведомления отправлены для поста: {self.title}")
+            except Exception as e:
+                logging.error(f"Ошибка при отправке уведомлений для поста: {self.title}: {e}")
 
     def preview(self):
         return self.content[:124] + '...' if len(self.content) > 124 else self.content
@@ -123,21 +138,29 @@ class Article(models.Model):
     category = models.ForeignKey(Category, related_name='articles', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.title
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.send_notification()
-
-    def send_notification(self):
-        category = self.category
-        subscribers = category.subscribers.all()
+        self.send_new_article_notifications()
+    def send_new_article_notifications(self):
+        subscribers = self.category.subscribers.all()
         for subscriber in subscribers:
-            subject = f"Новая статья в категории {category.name}"
-            message = render_to_string('email/new_article_notification.html', {
+            subject = f"Новая статья в категории {self.category.name}"
+            html_message = render_to_string('email/new_article_notification.html', {
                 'subscriber': subscriber,
                 'article': self,
                 'article_url': reverse_lazy('news_detail', kwargs={'pk': self.pk}),
             })
-            send_mail(subject, message, 'your_email@example.com', [subscriber.email])
+            plain_message = strip_tags(html_message)
+
+            send_email(
+                subject=subject,
+                message=plain_message,
+                recipient_list=[subscriber.email],
+                html_message=html_message
+            )
     class Meta:
         managed = False
         db_table = 'news_post'
@@ -147,11 +170,9 @@ class Article(models.Model):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    # Добавьте нужные вам поля профиля
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=100, blank=True)
     birth_date = models.DateField(null=True, blank=True)
-    # И другие поля, которые вы хотите хранить в профиле пользователя
 
     def __str__(self):
         return self.user.username + ' Profile'

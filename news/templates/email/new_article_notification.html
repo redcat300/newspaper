@@ -1,0 +1,9 @@
+<!-- templates/email/new_article_notification.html -->
+<html>
+<body>
+    <h1>Новая статья в категории {{ category.name }}</h1>
+    <p>Уважаемый {{ subscriber.username }},</p>
+    <p>Новая статья: "{{ post.title }}" была добавлена в категорию {{ category.name }}.</p>
+    <p>Прочитать статью можно по <a href="{{ article_url }}">этой ссылке</a>.</p>
+</body>
+</html>

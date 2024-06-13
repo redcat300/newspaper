@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,9 +26,13 @@ SECRET_KEY = 'django-insecure-0y)pb8$^s$bslj6%xcwnz*)x@tx$p+)#w3pl@h58k$7ee(%qye
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+ALLOWED_HOSTS = ['127.0.0.1']
 
-ALLOWED_HOSTS = []
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Application definition
 
@@ -42,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.flatpages',
     'news',
     'django_filters',
-    'django.contrib.sites',  # Обязательно добавьте эту строку перед allauth
+    'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -148,22 +152,18 @@ STATIC_URL = '/static/'
 LOGIN_REDIRECT_URL = '/news/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' if not DEBUG else 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.yandex.ru'
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'gavrilovvikt2012'
-EMAIL_HOST_PASSWORD = 'a1532bcd16a'
+EMAIL_HOST_USER = 'redcatyolo'
+EMAIL_HOST_PASSWORD = 'kuwsrjulcnzctbyh'
 EMAIL_USE_SSL = True
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+SERVER_EMAIL = EMAIL_HOST_USER
+
+EMAIL_ADMIN = 'gavrilovvikt0303@gmail.com'
 
 
-ADMINS = [
-    ('admin', 'gavrilovvikt0303@gmail.com'),
-]
-
-SERVER_EMAIL = 'gavrilovvikt2012@yandex.ru'
 
