@@ -6,7 +6,6 @@ from django.db.models.signals import post_save
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
-from .utils import send_new_post_email
 from django.contrib.auth.models import User
 import logging
 
@@ -86,7 +85,7 @@ class Post(models.Model):
         if is_new:
             logging.info(f"Создан новый пост: {self.title}")
             try:
-                send_new_post_email(self)
+                send_new_post_email.delay(self.id)  # Используйте асинхронный вызов
                 logging.info(f"Уведомления отправлены для поста: {self.title}")
             except Exception as e:
                 logging.error(f"Ошибка при отправке уведомлений для поста: {self.title}: {e}")

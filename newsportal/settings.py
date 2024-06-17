@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from celery.schedules import crontab
 
 
 
@@ -44,7 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.flatpages',
-    'news',
     'django_filters',
     'django.contrib.sites',
     'allauth',
@@ -52,7 +52,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'social_django',
+    'news.apps.NewsConfig',
 ]
+
 
 SITE_ID = 1
 MIDDLEWARE = [
@@ -165,5 +167,22 @@ SERVER_EMAIL = EMAIL_HOST_USER
 
 EMAIL_ADMIN = 'gavrilovvikt0303@gmail.com'
 
+# Redis Labs Connection Details
+REDIS_HOST = 'redis-16702.c321.us-east-1-2.ec2.redns.redis-cloud.com'
+REDIS_PORT = '16702'
+REDIS_PASSWORD = 'MakYdMlktWB2KncJp7qsJFtNfL0cGe7O'
+
+# Celery Configuration
+CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 
 
+CELERY_BEAT_SCHEDULE = {
+    'weekly-newsletter': {
+        'task': 'news.utils.send_weekly_newsletter',
+        'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
+    },
+}
