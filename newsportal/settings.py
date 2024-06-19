@@ -16,6 +16,7 @@ from celery.schedules import crontab
 
 
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -168,16 +169,22 @@ SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = 'gavrilovvikt0303@gmail.com'
 
 # Redis Labs Connection Details
-REDIS_HOST = 'redis-16702.c321.us-east-1-2.ec2.redns.redis-cloud.com'
-REDIS_PORT = '16702'
-REDIS_PASSWORD = 'MakYdMlktWB2KncJp7qsJFtNfL0cGe7O'
+REDIS_HOST = 'redis-18272.c328.europe-west3-1.gce.redns.redis-cloud.com'
+REDIS_PORT = 18272
+REDIS_PASSWORD = 'rNjUDWsZJvqVvBgW5Evb2zK2TahDGEfQ'
 
-# Celery Configuration
-CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_RESULT_BACKEND = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_BROKER_URL = f'redis://default:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://default:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_POOL_LIMIT = 10
+CELERY_BEAT_SCHEDULE = {
+    'send_weekly_newsletter': {
+        'task': 'news.tasks.send_weekly_newsletter',
+        'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
+    },
+}
 
 
 CELERY_BEAT_SCHEDULE = {
