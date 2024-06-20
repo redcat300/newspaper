@@ -1,6 +1,8 @@
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from allauth.account.views import SignupView
+from news.views import NewsListView
+from django.contrib.auth.views import LoginView
 from . import views
 
 urlpatterns = [

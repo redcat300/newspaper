@@ -167,11 +167,17 @@ class Article(models.Model):
     def __str__(self):
         return self.title
 
+# Добавьте поле is_subscribed в модель Profile
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=100, blank=True)
     birth_date = models.DateField(null=True, blank=True)
+    is_subscribed = models.BooleanField(default=False)  # Добавляем поле для подписки
+
+    def __str__(self):
+        return self.user.username + ' Profile'
+
 
     def __str__(self):
         return self.user.username + ' Profile'

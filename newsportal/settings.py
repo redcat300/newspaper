@@ -68,14 +68,14 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'news.middleware.AuthRedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'newsportal.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Добавляем путь к директории с шаблонами
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -144,8 +144,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 
 USE_TZ = True
@@ -182,14 +181,6 @@ CELERY_BROKER_POOL_LIMIT = 10
 CELERY_BEAT_SCHEDULE = {
     'send_weekly_newsletter': {
         'task': 'news.tasks.send_weekly_newsletter',
-        'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
-    },
-}
-
-
-CELERY_BEAT_SCHEDULE = {
-    'weekly-newsletter': {
-        'task': 'news.utils.send_weekly_newsletter',
         'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
     },
 }

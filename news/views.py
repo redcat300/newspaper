@@ -1,5 +1,7 @@
 import logging
 from django.core.mail import send_mail
+from django.views.generic import ListView
+from .models import Post
 
 def send_email(subject, message, recipient_list, html_message=None):
     try:
@@ -346,3 +348,7 @@ class Command(BaseCommand):
                         recipient_list=[subscriber.email],
                         html_message=html_message
                     )
+
+class NewsListView(ListView):
+    model = Post
+    template_name = 'news/news_list.html'
