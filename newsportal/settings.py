@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 from celery.schedules import crontab
-
+import logging
 
 
 
@@ -69,6 +69,8 @@ MIDDLEWARE = [
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'news.middleware.AuthRedirectMiddleware',
+    'django.middleware.cache.UpdateCacheMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
 ]
 
 ROOT_URLCONF = 'newsportal.urls'
@@ -150,7 +152,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 LOGIN_REDIRECT_URL = '/news/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -182,5 +186,55 @@ CELERY_BEAT_SCHEDULE = {
     'send_weekly_newsletter': {
         'task': 'news.tasks.send_weekly_newsletter',
         'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
+    },
+}
+
+CACHES = {
+    'default': {
+        'TIMEOUT': 50,
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.path.join(BASE_DIR, 'cache_files'),
+    }
+}
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {message}',
+            'style': '{',
+        },
+        'warning_formatter': {
+            'format': '{asctime} {levelname} {message} {pathname}',
+            'style': '{',
+        },
+        'error_formatter': {
+            'format': '{asctime} {levelname} {message} {pathname} {exc_info}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'warning_handler': {
+            'level': 'WARNING',
+            'class': 'logging.StreamHandler',
+            'formatter': 'warning_formatter',
+        },
+        'error_handler': {
+            'level': 'ERROR',
+            'class': 'logging.StreamHandler',
+            'formatter': 'error_formatter',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'warning_handler', 'error_handler'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }

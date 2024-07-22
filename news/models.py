@@ -182,4 +182,9 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username + ' Profile'
 
+@receiver(post_save, sender=Post)
+def clear_cache_on_save(sender, instance, **kwargs):
+    # Очистка кэша для конкретного поста
+    cache_key = f'post_{instance.pk}'
+    cache.delete(cache_key)
 

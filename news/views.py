@@ -1,7 +1,31 @@
 import logging
-from django.core.mail import send_mail
-from django.views.generic import ListView
-from .models import Post
+from datetime import timedelta
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.models import Group, User, Permission
+from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
+from django.core.management.base import BaseCommand
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.utils.html import strip_tags
+from django.views import View
+from django.views.decorators.cache import cache_page
+from django.views.generic import (
+    CreateView, UpdateView, DeleteView, DetailView, ListView
+)
+
+from .models import Post, Article, Category, Profile, Author
+from .utils import get_cached_post, set_cached_post, send_new_post_email
+
 
 def send_email(subject, message, recipient_list, html_message=None):
     try:
@@ -16,36 +40,6 @@ def send_email(subject, message, recipient_list, html_message=None):
         logging.info(f"Письмо успешно отправлено на: {recipient_list}")
     except Exception as e:
         logging.error(f"Ошибка отправки письма: {e}")
-
-
-from django.views.generic import (
-    CreateView, UpdateView, DeleteView
-)
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.views import View
-from django.contrib.auth.mixins import (
-    LoginRequiredMixin, UserPassesTestMixin
-)
-from django.core.management.base import BaseCommand
-from django.urls import reverse_lazy
-from django.contrib import messages
-from .models import Post, Article, Category, Profile, Author
-from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-from django.contrib.auth.forms import UserCreationForm
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.contrib.auth.models import Group, User, Permission
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.urls import reverse_lazy
-
-from django.core.mail import EmailMultiAlternatives
-from django.utils.html import strip_tags
-from .utils  import send_new_post_email
-
 
 class AuthorRequestView(View):
     def get(self, request, *args, **kwargs):
@@ -349,6 +343,20 @@ class Command(BaseCommand):
                         html_message=html_message
                     )
 
+@method_decorator(cache_page(60 * 5), name='dispatch')
 class NewsListView(ListView):
     model = Post
     template_name = 'news/news_list.html'
+
+class NewsDetailView(DetailView):
+    model = Post
+    template_name = 'news/news_detail.html'
+    context_object_name = 'post'
+
+    def get_object(self, queryset=None):
+        post_id = self.kwargs.get('pk')
+        post = get_cached_post(post_id)
+        if not post:
+            post = super().get_object(queryset)
+            set_cached_post(post)
+        return post

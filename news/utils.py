@@ -7,6 +7,18 @@ from django.conf import settings
 import logging
 from django.utils import timezone
 from datetime import timedelta
+from django.core.cache import cache
+
+def get_cache_key(post_id):
+    return f'post_{post_id}'
+
+def get_cached_post(post_id):
+    cache_key = get_cache_key(post_id)
+    return cache.get(cache_key)
+
+def set_cached_post(post):
+    cache_key = get_cache_key(post.id)
+    cache.set(cache_key, post, timeout=60 * 5)
 
 @shared_task
 def send_new_post_email(post_id):
@@ -76,4 +88,3 @@ def send_welcome_email(username, email):
     recipient_list = [email]
 
     send_mail(subject, message, from_email, recipient_list)
-
