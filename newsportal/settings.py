@@ -205,36 +205,110 @@ LOGGING = {
             'style': '{',
         },
         'warning_formatter': {
-            'format': '{asctime} {levelname} {message} {pathname}',
+            'format': '{asctime} {levelname} {pathname} {message}',
             'style': '{',
         },
         'error_formatter': {
-            'format': '{asctime} {levelname} {message} {pathname} {exc_info}',
+            'format': '{asctime} {levelname} {pathname} {message} {exc_info}',
             'style': '{',
+        },
+        'file_general': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+        },
+        'file_error': {
+            'format': '{asctime} {levelname} {pathname} {message} {exc_info}',
+            'style': '{',
+        },
+        'security': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
         },
     },
     'handlers': {
         'console': {
             'level': 'DEBUG',
+            'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
         'warning_handler': {
             'level': 'WARNING',
+            'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'warning_formatter',
         },
         'error_handler': {
             'level': 'ERROR',
+            'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'error_formatter',
+        },
+        'file_general': {
+            'level': 'INFO',
+            'filters': ['require_debug_false'],
+            'class': 'logging.FileHandler',
+            'filename': 'general.log',
+            'formatter': 'file_general',
+        },
+        'file_error': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'errors.log',
+            'formatter': 'file_error',
+        },
+        'file_security': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'security.log',
+            'formatter': 'security',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler',
+            'formatter': 'file_error',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'warning_handler', 'error_handler'],
+            'handlers': ['console', 'warning_handler', 'error_handler', 'file_general'],
             'level': 'DEBUG',
             'propagate': True,
         },
-    },
+        'django.request': {
+            'handlers': ['file_error', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['file_error', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.template': {
+            'handlers': ['file_error'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['file_error'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['file_security'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
 }
+
